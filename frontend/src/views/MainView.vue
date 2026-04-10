@@ -3,7 +3,7 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="brand" @click="router.push('/')">MIROFISH</div>
+        <div class="brand" @click="goHome">MIROFISH</div>
       </div>
       
       <div class="header-center">
@@ -15,17 +15,16 @@
             :class="{ active: viewMode === mode }"
             @click="viewMode = mode"
           >
-            {{ { graph: $t('main.layoutGraph'), split: $t('main.layoutSplit'), workbench: $t('main.layoutWorkbench') }[mode] }}
+            {{ t(`main.${mode}`) }}
           </button>
         </div>
       </div>
 
       <div class="header-right">
-        <LanguageSwitcher />
-        <div class="step-divider"></div>
+        <LanguageSelector />
         <div class="workflow-step">
-          <span class="step-num">Step {{ currentStep }}/5</span>
-          <span class="step-name">{{ $tm('main.stepNames')[currentStep - 1] }}</span>
+          <span class="step-num">{{ t('main.step') }} {{ currentStep }}/5</span>
+          <span class="step-name">{{ stepNames[currentStep - 1] }}</span>
         </div>
         <div class="step-divider"></div>
         <span class="status-indicator" :class="statusClass">
@@ -73,30 +72,79 @@
         />
       </div>
     </main>
+
+    <!-- Exit Confirmation Modal -->
+    <div v-if="showExitModal" class="exit-modal-overlay">
+      <div class="exit-modal">
+        <p class="exit-modal-title">Cancelar mesa de trabajo</p>
+        <p class="exit-modal-text">¿Desea regresar al inicio y cancelar la mesa de trabajo?</p>
+        <div class="exit-modal-actions">
+          <button class="btn-stay" @click="cancelExit">No, quedarse</button>
+          <button class="btn-leave" @click="confirmExit">Sí, salir</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import GraphPanel from '../components/GraphPanel.vue'
 import Step1GraphBuild from '../components/Step1GraphBuild.vue'
 import Step2EnvSetup from '../components/Step2EnvSetup.vue'
+import LanguageSelector from '../components/LanguageSelector.vue'
 import { generateOntology, getProject, buildGraph, getTaskStatus, getGraphData } from '../api/graph'
 import { getPendingUpload, clearPendingUpload } from '../store/pendingUpload'
-import LanguageSwitcher from '../components/LanguageSwitcher.vue'
+import { useSettings } from '../store/settings.js'
+
+const { t } = useSettings()
 
 const route = useRoute()
 const router = useRouter()
-const { t, tm } = useI18n()
+
+// --- Exit Guard ---
+const showExitModal = ref(false)
+let pendingRoute = null
+let allowLeave = false
+
+const goHome = () => {
+  pendingRoute = '/'
+  showExitModal.value = true
+}
+
+const confirmExit = () => {
+  allowLeave = true
+  showExitModal.value = false
+  router.push(pendingRoute || '/').finally(() => {
+    allowLeave = false
+    pendingRoute = null
+  })
+}
+
+const cancelExit = () => {
+  showExitModal.value = false
+  pendingRoute = null
+}
+
+onBeforeRouteLeave((to) => {
+  if (allowLeave) return true
+  pendingRoute = to.fullPath
+  showExitModal.value = true
+  return false
+})
+
+const handleBeforeUnload = (e) => {
+  e.preventDefault()
+  e.returnValue = ''
+}
 
 // Layout State
 const viewMode = ref('split') // graph | split | workbench
 
 // Step State
-const currentStep = ref(1) // 1: 图谱构建, 2: 环境搭建, 3: 开始模拟, 4: 报告生成, 5: 深度互动
-const stepNames = computed(() => tm('main.stepNames'))
+const currentStep = ref(1) // 1: Graph Build, 2: Env Setup, 3: Simulation, 4: Report, 5: Interaction
+const stepNames = computed(() => t('main.steps'))
 
 // Data State
 const currentProjectId = ref(route.params.projectId)
@@ -164,11 +212,11 @@ const toggleMaximize = (target) => {
 const handleNextStep = (params = {}) => {
   if (currentStep.value < 5) {
     currentStep.value++
-    addLog(t('log.enterStep', { step: currentStep.value, name: stepNames.value[currentStep.value - 1] }))
-    
-    // 如果是从 Step 2 进入 Step 3，记录模拟轮数配置
+    addLog(`Entering Step ${currentStep.value}: ${stepNames.value[currentStep.value - 1]}`)
+
+    // If entering Step 3 from Step 2, log simulation round config
     if (currentStep.value === 3 && params.maxRounds) {
-      addLog(t('log.customSimRounds', { rounds: params.maxRounds }))
+      addLog(`Custom simulation rounds: ${params.maxRounds}`)
     }
   }
 }
@@ -176,7 +224,7 @@ const handleNextStep = (params = {}) => {
 const handleGoBack = () => {
   if (currentStep.value > 1) {
     currentStep.value--
-    addLog(t('log.returnToStep', { step: currentStep.value, name: stepNames.value[currentStep.value - 1] }))
+    addLog(`Back to Step ${currentStep.value}: ${stepNames.value[currentStep.value - 1]}`)
   }
 }
 
@@ -400,10 +448,12 @@ const stopGraphPolling = () => {
 }
 
 onMounted(() => {
+  window.addEventListener('beforeunload', handleBeforeUnload)
   initProject()
 })
 
 onUnmounted(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
   stopPolling()
   stopGraphPolling()
 })
@@ -542,4 +592,62 @@ onUnmounted(() => {
 .panel-wrapper.left {
   border-right: 1px solid #EAEAEA;
 }
+
+/* Exit Modal */
+.exit-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.exit-modal {
+  background: #fff;
+  border: 1px solid #000;
+  padding: 32px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+.exit-modal-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+.exit-modal-text {
+  font-size: 0.9rem;
+  color: #555;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+.exit-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.btn-stay {
+  background: transparent;
+  border: 1px solid #ccc;
+  padding: 9px 20px;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  transition: background 0.15s;
+}
+.btn-stay:hover { background: #f5f5f5; }
+.btn-leave {
+  background: #000;
+  color: #fff;
+  border: 1px solid #000;
+  padding: 9px 20px;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  transition: background 0.15s;
+}
+.btn-leave:hover { background: #FF4500; border-color: #FF4500; }
 </style>

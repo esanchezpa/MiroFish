@@ -1,165 +1,113 @@
 <template>
   <div class="home-container">
-    <!-- 顶部导航栏 -->
+    <!-- Top Navigation Bar -->
     <nav class="navbar">
       <div class="nav-brand">MIROFISH</div>
       <div class="nav-links">
-        <LanguageSwitcher />
+        <LanguageSelector />
         <a href="https://github.com/666ghj/MiroFish" target="_blank" class="github-link">
-          {{ $t('nav.visitGithub') }} <span class="arrow">↗</span>
+          {{ t('home.github') }} <span>↗</span>
         </a>
       </div>
     </nav>
 
     <div class="main-content">
-      <!-- 上半部分：Hero 区域 -->
+      <!-- Hero Section -->
       <section class="hero-section">
         <div class="hero-left">
           <div class="tag-row">
-            <span class="orange-tag">{{ $t('home.tagline') }}</span>
-            <span class="version-text">{{ $t('home.version') }}</span>
+            <span class="orange-tag">{{ t('home.offlineEngine') }}</span>
+            <span class="version-text">{{ t('home.version') }}</span>
           </div>
-          
+
           <h1 class="main-title">
-            {{ $t('home.heroTitle1') }}<br>
-            <span class="gradient-text">{{ $t('home.heroTitle2') }}</span>
+            {{ t('home.title1') }}<br>
+            <span class="gradient-text">{{ t('home.title2') }}</span>
           </h1>
-          
+
           <div class="hero-desc">
-            <p>
-              <i18n-t keypath="home.heroDesc" tag="span">
-                <template #brand><span class="highlight-bold">{{ $t('home.heroDescBrand') }}</span></template>
-                <template #agentScale><span class="highlight-orange">{{ $t('home.heroDescAgentScale') }}</span></template>
-                <template #optimalSolution><span class="highlight-code">{{ $t('home.heroDescOptimalSolution') }}</span></template>
-              </i18n-t>
-            </p>
+            <p v-html="t('home.desc1')"></p>
             <p class="slogan-text">
-              {{ $t('home.slogan') }}<span class="blinking-cursor">_</span>
+              {{ t('home.desc2') }}<span class="blinking-cursor">_</span>
             </p>
           </div>
-           
+
           <div class="decoration-square"></div>
         </div>
-        
+
         <div class="hero-right">
-          <!-- Logo 区域 -->
           <div class="logo-container">
             <img src="../assets/logo/MiroFish_logo_left.jpeg" alt="MiroFish Logo" class="hero-logo" />
           </div>
-          
-          <button class="scroll-down-btn" @click="scrollToBottom">
-            ↓
-          </button>
+          <button class="scroll-down-btn" @click="scrollToBottom">↓</button>
         </div>
       </section>
 
-      <!-- 下半部分：双栏布局 -->
+      <!-- Dashboard: Two-Column Layout -->
       <section class="dashboard-section">
-        <!-- 左栏：状态与步骤 -->
+        <!-- Left Column: Status & Steps -->
         <div class="left-panel">
           <div class="panel-header">
-            <span class="status-dot">■</span> {{ $t('home.systemStatus') }}
+            <span class="status-dot">■</span> {{ t('home.statusTitle') }}
           </div>
-          
-          <h2 class="section-title">{{ $t('home.systemReady') }}</h2>
+
+          <h2 class="section-title">{{ t('home.readyTitle') }}</h2>
           <p class="section-desc">
-            {{ $t('home.systemReadyDesc') }}
+            {{ t('home.readyDesc') }}
           </p>
-          
-          <!-- 数据指标卡片 -->
+
           <div class="metrics-row">
             <div class="metric-card">
-              <div class="metric-value">{{ $t('home.metricLowCost') }}</div>
-              <div class="metric-label">{{ $t('home.metricLowCostDesc') }}</div>
+              <div class="metric-value">{{ t('home.metric1Val') }}</div>
+              <div class="metric-label">{{ t('home.metric1Desc') }}</div>
             </div>
             <div class="metric-card">
-              <div class="metric-value">{{ $t('home.metricHighAvail') }}</div>
-              <div class="metric-label">{{ $t('home.metricHighAvailDesc') }}</div>
+              <div class="metric-value">{{ t('home.metric2Val') }}</div>
+              <div class="metric-label">{{ t('home.metric2Desc') }}</div>
             </div>
           </div>
 
-          <!-- 项目模拟步骤介绍 (新增区域) -->
           <div class="steps-container">
             <div class="steps-header">
-               <span class="diamond-icon">◇</span> {{ $t('home.workflowSequence') }}
+               <span class="diamond-icon">◇</span> {{ t('home.workflowTitle') }}
             </div>
             <div class="workflow-list">
-              <div class="workflow-item">
-                <span class="step-num">01</span>
+              <div v-for="(step, i) in steps" :key="i" class="workflow-item">
+                <span class="step-num">{{ step.num }}</span>
                 <div class="step-info">
-                  <div class="step-title">{{ $t('home.step01Title') }}</div>
-                  <div class="step-desc">{{ $t('home.step01Desc') }}</div>
-                </div>
-              </div>
-              <div class="workflow-item">
-                <span class="step-num">02</span>
-                <div class="step-info">
-                  <div class="step-title">{{ $t('home.step02Title') }}</div>
-                  <div class="step-desc">{{ $t('home.step02Desc') }}</div>
-                </div>
-              </div>
-              <div class="workflow-item">
-                <span class="step-num">03</span>
-                <div class="step-info">
-                  <div class="step-title">{{ $t('home.step03Title') }}</div>
-                  <div class="step-desc">{{ $t('home.step03Desc') }}</div>
-                </div>
-              </div>
-              <div class="workflow-item">
-                <span class="step-num">04</span>
-                <div class="step-info">
-                  <div class="step-title">{{ $t('home.step04Title') }}</div>
-                  <div class="step-desc">{{ $t('home.step04Desc') }}</div>
-                </div>
-              </div>
-              <div class="workflow-item">
-                <span class="step-num">05</span>
-                <div class="step-info">
-                  <div class="step-title">{{ $t('home.step05Title') }}</div>
-                  <div class="step-desc">{{ $t('home.step05Desc') }}</div>
+                  <div class="step-title">{{ step.title }}</div>
+                  <div class="step-desc">{{ step.desc }}</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 右栏：交互控制台 -->
+        <!-- Right Column: Interactive Console -->
         <div class="right-panel">
           <div class="console-box">
-            <!-- 上传区域 -->
             <div class="console-section">
               <div class="console-header">
-                <span class="console-label">{{ $t('home.realitySeed') }}</span>
-                <span class="console-meta">{{ $t('home.supportedFormats') }}</span>
+                <span>{{ t('home.console1Title') }}</span>
+                <span>{{ t('home.console1Sub') }}</span>
               </div>
-              
-              <div 
+              <div
                 class="upload-zone"
-                :class="{ 'drag-over': isDragOver, 'has-files': files.length > 0 }"
+                :class="[showErrorBorders && files.length === 0 ? 'error-pulse' : '', files.length > 0 ? 'has-files' : '']"
                 @dragover.prevent="handleDragOver"
                 @dragleave.prevent="handleDragLeave"
                 @drop.prevent="handleDrop"
                 @click="triggerFileInput"
               >
-                <input
-                  ref="fileInput"
-                  type="file"
-                  multiple
-                  accept=".pdf,.md,.txt"
-                  @change="handleFileSelect"
-                  style="display: none"
-                  :disabled="loading"
-                />
-                
+                <input ref="fileInput" type="file" multiple accept=".pdf,.md,.txt" @change="handleFileSelect" style="display: none" :disabled="loading" />
                 <div v-if="files.length === 0" class="upload-placeholder">
                   <div class="upload-icon">↑</div>
-                  <div class="upload-title">{{ $t('home.dragToUpload') }}</div>
-                  <div class="upload-hint">{{ $t('home.orBrowse') }}</div>
+                  <div class="upload-title">{{ t('home.dragDropTitle') }}</div>
+                  <div class="upload-hint">{{ t('home.dragDropHint') }}</div>
                 </div>
-                
                 <div v-else class="file-list">
                   <div v-for="(file, index) in files" :key="index" class="file-item">
-                    <span class="file-icon">📄</span>
+                    <span>📄</span>
                     <span class="file-name">{{ file.name }}</span>
                     <button @click.stop="removeFile(index)" class="remove-btn">×</button>
                   </div>
@@ -167,45 +115,36 @@
               </div>
             </div>
 
-            <!-- 分割线 -->
-            <div class="console-divider">
-              <span>{{ $t('home.inputParams') }}</span>
-            </div>
+            <div class="console-divider"><span>{{ t('home.parametersTitle') }}</span></div>
 
-            <!-- 输入区域 -->
             <div class="console-section">
               <div class="console-header">
-                <span class="console-label">{{ $t('home.simulationPrompt') }}</span>
+                <span>{{ t('home.console2Title') }}</span>
               </div>
-              <div class="input-wrapper">
-                <textarea
-                  v-model="formData.simulationRequirement"
-                  class="code-input"
-                  :placeholder="$t('home.promptPlaceholder')"
-                  rows="6"
-                  :disabled="loading"
-                ></textarea>
-                <div class="model-badge">{{ $t('home.engineBadge') }}</div>
+              <div
+                class="input-wrapper"
+                :class="showErrorBorders && formData.simulationRequirement.trim() === '' ? 'error-pulse' : ''"
+                @click="clearError"
+              >
+                <textarea v-model="formData.simulationRequirement" class="code-input" :placeholder="t('home.inputPlaceholder')" rows="6" :disabled="loading" @input="clearError"></textarea>
+                <div class="model-badge">{{ t('home.engineBadge') }}</div>
               </div>
             </div>
 
-            <!-- 启动按钮 -->
             <div class="console-section btn-section">
-              <button 
-                class="start-engine-btn"
-                @click="startSimulation"
-                :disabled="!canSubmit || loading"
-              >
-                <span v-if="!loading">{{ $t('home.startEngine') }}</span>
-                <span v-else>{{ $t('home.initializing') }}</span>
-                <span class="btn-arrow">→</span>
+              <Transition name="fade">
+                <div v-if="showErrorPopup" class="error-notification">Completar pasos 1 y 2 antes de iniciar</div>
+              </Transition>
+              <button class="start-engine-btn" @click="startSimulation" :disabled="loading">
+                <span v-if="!loading">{{ t('home.startBtn') }}</span>
+                <span v-else>{{ t('home.initializing') }}</span>
+                <span>→</span>
               </button>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- 历史项目数据库 -->
       <HistoryDatabase />
     </div>
   </div>
@@ -215,104 +154,87 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import HistoryDatabase from '../components/HistoryDatabase.vue'
-import LanguageSwitcher from '../components/LanguageSwitcher.vue'
+import LanguageSelector from '../components/LanguageSelector.vue'
+import { useSettings } from '../store/settings.js'
+
+const { t } = useSettings()
 
 const router = useRouter()
 
-// 表单数据
-const formData = ref({
-  simulationRequirement: ''
-})
-
-// 文件列表
+const formData = ref({ simulationRequirement: '' })
 const files = ref([])
-
-// 状态
 const loading = ref(false)
 const error = ref('')
 const isDragOver = ref(false)
-
-// 文件输入引用
 const fileInput = ref(null)
+const showErrorBorders = ref(false)
+const showErrorPopup = ref(false)
 
-// 计算属性:是否可以提交
+const clearError = () => {
+  showErrorBorders.value = false
+}
+
 const canSubmit = computed(() => {
   return formData.value.simulationRequirement.trim() !== '' && files.value.length > 0
 })
 
-// 触发文件选择
+const steps = computed(() => [
+  { num: '01', title: t('home.step1Title'), desc: t('home.step1Desc') },
+  { num: '02', title: t('home.step2Title'), desc: t('home.step2Desc') },
+  { num: '03', title: t('home.step3Title'), desc: t('home.step3Desc') },
+  { num: '04', title: t('home.step4Title'), desc: t('home.step4Desc') },
+  { num: '05', title: t('home.step5Title'), desc: t('home.step5Desc') },
+])
+
 const triggerFileInput = () => {
-  if (!loading.value) {
-    fileInput.value?.click()
-  }
+  clearError()
+  if (!loading.value) fileInput.value?.click()
 }
 
-// 处理文件选择
 const handleFileSelect = (event) => {
-  const selectedFiles = Array.from(event.target.files)
-  addFiles(selectedFiles)
+  clearError()
+  addFiles(Array.from(event.target.files))
 }
 
-// 处理拖拽相关
-const handleDragOver = (e) => {
-  if (!loading.value) {
-    isDragOver.value = true
-  }
-}
-
-const handleDragLeave = (e) => {
-  isDragOver.value = false
-}
-
+const handleDragOver = (e) => { isDragOver.value = true }
+const handleDragLeave = (e) => { isDragOver.value = false }
 const handleDrop = (e) => {
+  clearError()
   isDragOver.value = false
-  if (loading.value) return
-  
-  const droppedFiles = Array.from(e.dataTransfer.files)
-  addFiles(droppedFiles)
+  addFiles(Array.from(e.dataTransfer.files))
 }
 
-// 添加文件
 const addFiles = (newFiles) => {
-  const validFiles = newFiles.filter(file => {
-    const ext = file.name.split('.').pop().toLowerCase()
-    return ['pdf', 'md', 'txt'].includes(ext)
-  })
-  files.value.push(...validFiles)
+  const allowed = ['.pdf', '.md', '.txt']
+  const valid = newFiles.filter(f => allowed.some(ext => f.name.toLowerCase().endsWith(ext)))
+  files.value = [...files.value, ...valid]
 }
 
-// 移除文件
-const removeFile = (index) => {
-  files.value.splice(index, 1)
-}
+const removeFile = (index) => { files.value.splice(index, 1) }
 
-// 滚动到底部
-const scrollToBottom = () => {
-  window.scrollTo({
-    top: document.body.scrollHeight,
-    behavior: 'smooth'
-  })
-}
+const scrollToBottom = () => { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }) }
 
-// 开始模拟 - 立即跳转，API调用在Process页面进行
 const startSimulation = () => {
-  if (!canSubmit.value || loading.value) return
-  
-  // 存储待上传的数据
+  if (!canSubmit.value) {
+    showErrorBorders.value = true
+    showErrorPopup.value = true
+    setTimeout(() => {
+      showErrorPopup.value = false
+    }, 3000)
+    return
+  }
+  showErrorBorders.value = false
+  showErrorPopup.value = false
+  if (loading.value) return
   import('../store/pendingUpload.js').then(({ setPendingUpload }) => {
     setPendingUpload(files.value, formData.value.simulationRequirement)
-    
-    // 立即跳转到Process页面（使用特殊标识表示新建项目）
-    router.push({
-      name: 'Process',
-      params: { projectId: 'new' }
-    })
+    router.push({ name: 'Process', params: { projectId: 'new' } })
   })
 }
 </script>
 
 <style scoped>
-/* 全局变量与重置 */
+/* Global variables */
 :root {
   --black: #000000;
   --white: #FFFFFF;
@@ -320,13 +242,8 @@ const startSimulation = () => {
   --gray-light: #F5F5F5;
   --gray-text: #666666;
   --border: #E5E5E5;
-  /* 
-    使用 Space Grotesk 作为主要标题字体，JetBrains Mono 作为代码/标签字体
-    确保已在 index.html 引入这些 Google Fonts 
-  */
   --font-mono: 'JetBrains Mono', monospace;
   --font-sans: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
-  --font-cn: 'Noto Sans SC', system-ui, sans-serif;
 }
 
 .home-container {
@@ -336,7 +253,7 @@ const startSimulation = () => {
   color: var(--black);
 }
 
-/* 顶部导航 */
+/* Navbar */
 .navbar {
   height: 60px;
   background: var(--black);
@@ -357,7 +274,7 @@ const startSimulation = () => {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
 }
 
 .github-link {
@@ -372,22 +289,16 @@ const startSimulation = () => {
   transition: opacity 0.2s;
 }
 
-.github-link:hover {
-  opacity: 0.8;
-}
+.github-link:hover { opacity: 0.8; }
 
-.arrow {
-  font-family: sans-serif;
-}
-
-/* 主要内容区 */
+/* Main content */
 .main-content {
   max-width: 1400px;
   margin: 0 auto;
   padding: 60px 40px;
 }
 
-/* Hero 区域 */
+/* Hero */
 .hero-section {
   display: flex;
   justify-content: space-between;
@@ -434,7 +345,7 @@ const startSimulation = () => {
 }
 
 .gradient-text {
-  background: linear-gradient(90deg, #000000 0%, #444444 100%);
+  background: linear-gradient(90deg, #000 0%, #444 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   display: inline-block;
@@ -450,30 +361,7 @@ const startSimulation = () => {
   text-align: justify;
 }
 
-.hero-desc p {
-  margin-bottom: 1.5rem;
-}
-
-.highlight-bold {
-  color: var(--black);
-  font-weight: 700;
-}
-
-.highlight-orange {
-  color: var(--orange);
-  font-weight: 700;
-  font-family: var(--font-mono);
-}
-
-.highlight-code {
-  background: rgba(0, 0, 0, 0.05);
-  padding: 2px 6px;
-  border-radius: 2px;
-  font-family: var(--font-mono);
-  font-size: 0.9em;
-  color: var(--black);
-  font-weight: 600;
-}
+.hero-desc p { margin-bottom: 1.5rem; }
 
 .slogan-text {
   font-size: 1.2rem;
@@ -518,7 +406,7 @@ const startSimulation = () => {
 }
 
 .hero-logo {
-  max-width: 500px; /* 调整logo大小 */
+  max-width: 500px;
   width: 100%;
 }
 
@@ -536,11 +424,9 @@ const startSimulation = () => {
   transition: all 0.2s;
 }
 
-.scroll-down-btn:hover {
-  border-color: var(--orange);
-}
+.scroll-down-btn:hover { border-color: var(--orange); }
 
-/* Dashboard 双栏布局 */
+/* Dashboard */
 .dashboard-section {
   display: flex;
   gap: 60px;
@@ -549,15 +435,10 @@ const startSimulation = () => {
   align-items: flex-start;
 }
 
-.dashboard-section .left-panel,
-.dashboard-section .right-panel {
-  display: flex;
-  flex-direction: column;
-}
-
-/* 左侧面板 */
 .left-panel {
   flex: 0.8;
+  display: flex;
+  flex-direction: column;
 }
 
 .panel-header {
@@ -570,10 +451,7 @@ const startSimulation = () => {
   margin-bottom: 20px;
 }
 
-.status-dot {
-  color: var(--orange);
-  font-size: 0.8rem;
-}
+.status-dot { color: var(--orange); font-size: 0.8rem; }
 
 .section-title {
   font-size: 2rem;
@@ -606,12 +484,8 @@ const startSimulation = () => {
   margin-bottom: 5px;
 }
 
-.metric-label {
-  font-size: 0.85rem;
-  color: #999;
-}
+.metric-label { font-size: 0.85rem; color: #999; }
 
-/* 项目模拟步骤介绍 */
 .steps-container {
   border: 1px solid var(--border);
   padding: 30px;
@@ -628,10 +502,7 @@ const startSimulation = () => {
   gap: 8px;
 }
 
-.diamond-icon {
-  font-size: 1.2rem;
-  line-height: 1;
-}
+.diamond-icon { font-size: 1.2rem; line-height: 1; }
 
 .workflow-list {
   display: flex;
@@ -652,9 +523,7 @@ const startSimulation = () => {
   opacity: 0.3;
 }
 
-.step-info {
-  flex: 1;
-}
+.step-info { flex: 1; }
 
 .step-title {
   font-weight: 520;
@@ -662,28 +531,23 @@ const startSimulation = () => {
   margin-bottom: 4px;
 }
 
-.step-desc {
-  font-size: 0.85rem;
-  color: var(--gray-text);
-}
+.step-desc { font-size: 0.85rem; color: var(--gray-text); }
 
-/* 右侧交互控制台 */
+/* Right panel – Console */
 .right-panel {
   flex: 1.2;
+  display: flex;
+  flex-direction: column;
 }
 
 .console-box {
-  border: 1px solid #CCC; /* 外部实线 */
-  padding: 8px; /* 内边距形成双重边框感 */
+  border: 1px solid #CCC;
+  padding: 8px;
 }
 
-.console-section {
-  padding: 20px;
-}
+.console-section { padding: 20px; }
 
-.console-section.btn-section {
-  padding-top: 0;
-}
+.console-section.btn-section { padding-top: 0; position: relative; }
 
 .console-header {
   display: flex;
@@ -706,18 +570,34 @@ const startSimulation = () => {
   background: #FAFAFA;
 }
 
-.upload-zone.has-files {
-  align-items: flex-start;
+.upload-zone.has-files { align-items: flex-start; }
+.upload-zone:hover { background: #F0F0F0; border-color: #999; }
+
+/* Error state */
+.error-pulse {
+  border: 2px solid red !important;
+  background-color: #fff3f3 !important;
+  transition: all 0.2s ease-in-out;
 }
 
-.upload-zone:hover {
-  background: #F0F0F0;
-  border-color: #999;
+.error-notification {
+  position: absolute;
+  top: -44px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #ff4444;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: bold;
+  z-index: 10;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  white-space: nowrap;
 }
 
-.upload-placeholder {
-  text-align: center;
-}
+.upload-placeholder { text-align: center; }
 
 .upload-icon {
   width: 40px;
@@ -760,10 +640,7 @@ const startSimulation = () => {
   font-size: 0.85rem;
 }
 
-.file-name {
-  flex: 1;
-  margin: 0 10px;
-}
+.file-name { flex: 1; margin: 0 10px; }
 
 .remove-btn {
   background: none;
@@ -777,14 +654,7 @@ const startSimulation = () => {
   display: flex;
   align-items: center;
   margin: 10px 0;
-}
-
-.console-divider::before,
-.console-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: #EEE;
+  border-top: 1px solid #EEE;
 }
 
 .console-divider span {
@@ -836,118 +706,22 @@ const startSimulation = () => {
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  transition: all 0.3s ease;
   letter-spacing: 1px;
-  position: relative;
-  overflow: hidden;
-}
-
-/* 可点击状态（非禁用） */
-.start-engine-btn:not(:disabled) {
-  background: var(--black);
-  border: 1px solid var(--black);
-  animation: pulse-border 2s infinite;
-}
-
-.start-engine-btn:hover:not(:disabled) {
-  background: var(--orange);
-  border-color: var(--orange);
-  transform: translateY(-2px);
-}
-
-.start-engine-btn:active:not(:disabled) {
-  transform: translateY(0);
 }
 
 .start-engine-btn:disabled {
-  background: #E5E5E5;
-  color: #999;
+  opacity: 0.5;
   cursor: not-allowed;
-  transform: none;
-  border: 1px solid #E5E5E5;
 }
 
-/* 引导动画：微妙的边框脉冲 */
-@keyframes pulse-border {
-  0% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.2); }
-  70% { box-shadow: 0 0 0 6px rgba(0, 0, 0, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+/* Fade transition for error popup */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
 }
 
-/* 响应式适配 */
-@media (max-width: 1024px) {
-  .dashboard-section {
-    flex-direction: column;
-  }
-  
-  .hero-section {
-    flex-direction: column;
-  }
-  
-  .hero-left {
-    padding-right: 0;
-    margin-bottom: 40px;
-  }
-  
-  .hero-logo {
-    max-width: 200px;
-    margin-bottom: 20px;
-  }
-}
-</style>
-
-<style>
-/* English locale adjustments (unscoped to target html[lang]) */
-html[lang="en"] .main-title {
-  font-size: 3.5rem;
-  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  letter-spacing: -1px;
-}
-
-html[lang="en"] .hero-desc {
-  text-align: left;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  letter-spacing: 0;
-}
-
-html[lang="en"] .slogan-text {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  letter-spacing: 0;
-}
-
-html[lang="en"] .tag-row {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-html[lang="en"] .navbar .nav-links {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-/* Left pane: system status + workflow */
-html[lang="en"] .status-section {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-html[lang="en"] .status-section .status-ready {
-  font-size: 1.6rem;
-}
-
-html[lang="en"] .status-section .metric-value {
-  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 1.4rem;
-}
-
-html[lang="en"] .workflow-list .step-title {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-html[lang="en"] .workflow-list .step-desc {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  font-size: 0.72rem !important;
-  line-height: 1.4 !important;
-}
-
-html[lang="en"] .workflow-list {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
