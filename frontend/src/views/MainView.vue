@@ -22,6 +22,7 @@
 
       <div class="header-right">
         <LanguageSelector />
+        <button class="gear-btn-main" @click="settingsOpen = true" title="Build Settings">⚙</button>
         <div class="workflow-step">
           <span class="step-num">{{ t('main.step') }} {{ currentStep }}/5</span>
           <span class="step-name">{{ stepNames[currentStep - 1] }}</span>
@@ -33,6 +34,7 @@
         </span>
       </div>
     </header>
+    <SettingsDrawer v-model:open="settingsOpen" />
 
     <!-- Main Content Area -->
     <main class="content-area">
@@ -94,14 +96,19 @@ import GraphPanel from '../components/GraphPanel.vue'
 import Step1GraphBuild from '../components/Step1GraphBuild.vue'
 import Step2EnvSetup from '../components/Step2EnvSetup.vue'
 import LanguageSelector from '../components/LanguageSelector.vue'
+import SettingsDrawer from '../components/SettingsDrawer.vue'
 import { generateOntology, getProject, buildGraph, getTaskStatus, getGraphData } from '../api/graph'
 import { getPendingUpload, clearPendingUpload } from '../store/pendingUpload'
 import { useSettings } from '../store/settings.js'
+import { defaultBuildSettings } from '../store/buildSettings.js'
 
 const { t } = useSettings()
 
 const route = useRoute()
 const router = useRouter()
+
+// --- Settings Drawer ---
+const settingsOpen = ref(false)
 
 // --- Exit Guard ---
 const showExitModal = ref(false)
@@ -327,7 +334,23 @@ const startBuildGraph = async () => {
     buildProgress.value = { progress: 0, message: 'Starting build...' }
     addLog('Initiating graph build...')
     
-    const res = await buildGraph({ project_id: currentProjectId.value })
+    // v0.2: read build config from pendingUpload snapshot, fallback to defaults
+    const pending = getPendingUpload()
+    const cfg = pending.buildSettings || defaultBuildSettings
+    addLog(`Build config: chunk_size=${cfg.chunkSize}, batch_size=${cfg.batchSize}`)
+    
+    const res = await buildGraph({
+      project_id: currentProjectId.value,
+      chunk_size: cfg.chunkSize,
+      chunk_overlap: cfg.chunkOverlap,
+      batch_size: cfg.batchSize,
+      boundary_min_fill_ratio: cfg.boundaryMinFillRatio,
+      min_chunk_chars: cfg.minChunkChars,
+      episode_pack_size: cfg.episodePackSize,
+      pdf_cleanup_enabled: cfg.pdfCleanupEnabled,
+      remove_repeated_headers_footers: cfg.removeRepeatedHeadersFooters,
+      normalize_whitespace: cfg.normalizeWhitespace
+    })
     if (res.success) {
       addLog(`Graph build task started. Task ID: ${res.data.task_id}`)
       startGraphPolling()
@@ -536,6 +559,24 @@ onUnmounted(() => {
   align-items: center;
   gap: 16px;
 }
+
+.gear-btn-main {
+  background: none;
+  border: 1px solid rgba(0,0,0,0.15);
+  color: #555;
+  font-size: 1rem;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.gear-btn-main:hover { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.3); }
 
 .workflow-step {
   display: flex;

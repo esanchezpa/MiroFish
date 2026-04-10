@@ -5,11 +5,15 @@
       <div class="nav-brand">MIROFISH</div>
       <div class="nav-links">
         <LanguageSelector />
+        <button class="gear-btn" @click="settingsOpen = true" title="Build Settings">
+          ⚙
+        </button>
         <a href="https://github.com/666ghj/MiroFish" target="_blank" class="github-link">
           {{ t('home.github') }} <span>↗</span>
         </a>
       </div>
     </nav>
+    <SettingsDrawer v-model:open="settingsOpen" :total-chars="totalUploadedCharsEstimate" />
 
     <div class="main-content">
       <!-- Hero Section -->
@@ -155,7 +159,9 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import HistoryDatabase from '../components/HistoryDatabase.vue'
 import LanguageSelector from '../components/LanguageSelector.vue'
+import SettingsDrawer from '../components/SettingsDrawer.vue'
 import { useSettings } from '../store/settings.js'
+import { buildSettings } from '../store/buildSettings.js'
 
 const { t } = useSettings()
 
@@ -169,6 +175,10 @@ const isDragOver = ref(false)
 const fileInput = ref(null)
 const showErrorBorders = ref(false)
 const showErrorPopup = ref(false)
+const settingsOpen = ref(false)
+
+// Rough estimate of total chars from selected files (100KB~500KB per PDF avg)
+const totalUploadedCharsEstimate = computed(() => files.value.length * 200_000)
 
 const clearError = () => {
   showErrorBorders.value = false
@@ -227,7 +237,8 @@ const startSimulation = () => {
   showErrorPopup.value = false
   if (loading.value) return
   import('../store/pendingUpload.js').then(({ setPendingUpload }) => {
-    setPendingUpload(files.value, formData.value.simulationRequirement)
+    // v0.2: pass buildSettings snapshot so MainView has the full config
+    setPendingUpload(files.value, formData.value.simulationRequirement, { ...buildSettings })
     router.push({ name: 'Process', params: { projectId: 'new' } })
   })
 }
@@ -290,6 +301,23 @@ const startSimulation = () => {
 }
 
 .github-link:hover { opacity: 0.8; }
+
+.gear-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  font-size: 1.1rem;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  line-height: 1;
+}
+.gear-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
 
 /* Main content */
 .main-content {

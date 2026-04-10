@@ -4,8 +4,11 @@
 """
 
 import os
+import math
+import time
 import traceback
 import threading
+from datetime import datetime
 from flask import request, jsonify
 
 from . import graph_bp
@@ -336,21 +339,52 @@ def build_graph():
             project.graph_build_task_id = None
             project.error = None
         
-        # 获取配置
+        # Read config from request — with project and Config fallbacks
         graph_name = data.get('graph_name', project.name or 'MiroFish Graph')
-        chunk_size = data.get('chunk_size', project.chunk_size or Config.DEFAULT_CHUNK_SIZE)
-        chunk_overlap = data.get('chunk_overlap', project.chunk_overlap or Config.DEFAULT_CHUNK_OVERLAP)
+        chunk_size = int(data.get('chunk_size', project.chunk_size or Config.DEFAULT_CHUNK_SIZE))
+        chunk_overlap = int(data.get('chunk_overlap', project.chunk_overlap or Config.DEFAULT_CHUNK_OVERLAP))
+        batch_size = int(data.get('batch_size', project.batch_size or Config.DEFAULT_BATCH_SIZE))
+        boundary_min_fill_ratio = float(data.get('boundary_min_fill_ratio',
+            project.boundary_min_fill_ratio or Config.DEFAULT_BOUNDARY_MIN_FILL_RATIO))
+        min_chunk_chars = int(data.get('min_chunk_chars',
+            project.min_chunk_chars or Config.DEFAULT_MIN_CHUNK_CHARS))
+        episode_pack_size = int(data.get('episode_pack_size',
+            project.episode_pack_size or Config.DEFAULT_EPISODE_PACK_SIZE))
         
-        # 更新项目配置
+        # Persist config snapshot to project
         project.chunk_size = chunk_size
         project.chunk_overlap = chunk_overlap
+        project.batch_size = batch_size
+        project.boundary_min_fill_ratio = boundary_min_fill_ratio
+        project.min_chunk_chars = min_chunk_chars
+        project.episode_pack_size = episode_pack_size
         
-        # 获取提取的文本
+        # Load extracted text
         text = ProjectManager.get_extracted_text(project_id)
         if not text:
             return jsonify({
                 "success": False,
                 "error": t('api.textNotFound')
+            }), 400
+        
+        # --- Quota guardrail (pre-build) ---
+        total_chars = len(text)
+        effective_step = max(chunk_size - chunk_overlap, 1)
+        estimated_episodes = math.ceil((total_chars - chunk_overlap) / effective_step)
+        hard_stop = Config.DEFAULT_HARD_STOP_EPISODE_THRESHOLD
+        warn_threshold = Config.DEFAULT_WARN_EPISODE_THRESHOLD
+        
+        if estimated_episodes > hard_stop:
+            return jsonify({
+                "success": False,
+                "error": (
+                    f"Build blocked: estimated episodes ({estimated_episodes:,}) exceed "
+                    f"the hard stop threshold ({hard_stop:,}). "
+                    f"Increase chunk_size or batch_size to reduce episode count."
+                ),
+                "quota_risk": "HIGH",
+                "estimated_episodes": estimated_episodes,
+                "hard_stop_threshold": hard_stop
             }), 400
         
         # 获取本体
@@ -389,18 +423,21 @@ def build_graph():
                 # 创建图谱构建服务
                 builder = GraphBuilderService(api_key=Config.ZEP_API_KEY)
                 
-                # 分块
+                # Chunk text with full config
                 task_manager.update_task(
                     task_id,
                     message=t('progress.textChunking'),
                     progress=5
                 )
                 chunks = TextProcessor.split_text(
-                    text, 
-                    chunk_size=chunk_size, 
-                    overlap=chunk_overlap
+                    text,
+                    chunk_size=chunk_size,
+                    overlap=chunk_overlap,
+                    boundary_min_fill_ratio=boundary_min_fill_ratio,
+                    min_chunk_chars=min_chunk_chars
                 )
                 total_chunks = len(chunks)
+                build_start = time.time()
                 
                 # 创建图谱
                 task_manager.update_task(
@@ -437,10 +474,11 @@ def build_graph():
                     progress=15
                 )
                 
+                # FIXED (v0.2): batch_size is now configurable — was hardcoded to 3
                 episode_uuids = builder.add_text_batches(
-                    graph_id, 
+                    graph_id,
                     chunks,
-                    batch_size=3,
+                    batch_size=batch_size,
                     progress_callback=add_progress_callback
                 )
                 
@@ -475,9 +513,27 @@ def build_graph():
                 
                 node_count = graph_data.get("node_count", 0)
                 edge_count = graph_data.get("edge_count", 0)
-                build_logger.info(f"[{task_id}] 图谱构建完成: graph_id={graph_id}, 节点={node_count}, 边={edge_count}")
+                build_elapsed_ms = int((time.time() - build_start) * 1000)
+                actual_batches = math.ceil(total_chunks / batch_size)
                 
-                # 完成
+                build_logger.info(f"[{task_id}] Graph build complete: graph_id={graph_id}, nodes={node_count}, edges={edge_count}")
+                
+                # Save real build stats to project
+                project.build_stats = {
+                    "actual_chunks": total_chunks,
+                    "actual_batches": actual_batches,
+                    "actual_episodes": len(episode_uuids),
+                    "node_count": node_count,
+                    "edge_count": edge_count,
+                    "build_elapsed_ms": build_elapsed_ms,
+                    "chunk_size_used": chunk_size,
+                    "chunk_overlap_used": chunk_overlap,
+                    "batch_size_used": batch_size,
+                    "boundary_min_fill_ratio_used": boundary_min_fill_ratio,
+                    "min_chunk_chars_used": min_chunk_chars,
+                    "last_run_at": datetime.now().isoformat()
+                }
+                
                 task_manager.update_task(
                     task_id,
                     status=TaskStatus.COMPLETED,
@@ -488,9 +544,15 @@ def build_graph():
                         "graph_id": graph_id,
                         "node_count": node_count,
                         "edge_count": edge_count,
-                        "chunk_count": total_chunks
+                        "chunk_count": total_chunks,
+                        "batch_count": actual_batches,
+                        "build_elapsed_ms": build_elapsed_ms
                     }
                 )
+                
+                # Persist stats
+                project.status = ProjectStatus.GRAPH_COMPLETED
+                ProjectManager.save_project(project)
                 
             except Exception as e:
                 # 更新项目状态为失败
@@ -614,6 +676,152 @@ def delete_graph(graph_id: str):
             "message": t('api.graphDeleted', id=graph_id)
         })
         
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
+
+
+# ============== v0.2: Estimation endpoint ==============
+
+@graph_bp.route('/estimate', methods=['POST'])
+def estimate_graph():
+    """
+    POST /api/graph/estimate
+
+    Estimates chunks, episodes, batches, tokens, and time without triggering a real build.
+    Does NOT require a Zep API key.
+
+    Request (JSON):
+        {
+            "project_id": "proj_xxx",
+            "chunk_size": 4000,      (optional, uses project/config defaults)
+            "chunk_overlap": 120,
+            "boundary_min_fill_ratio": 0.8,
+            "min_chunk_chars": 2200,
+            "batch_size": 12,
+            "max_rounds_preview": 48,
+            "boost_mode": "auto"
+        }
+    """
+    try:
+        data = request.get_json() or {}
+        project_id = data.get('project_id')
+
+        if not project_id:
+            return jsonify({"success": False, "error": "project_id required"}), 400
+
+        project = ProjectManager.get_project(project_id)
+        if not project:
+            return jsonify({"success": False, "error": f"Project not found: {project_id}"}), 404
+
+        # Config: request > project > global defaults
+        chunk_size = int(data.get('chunk_size', project.chunk_size or Config.DEFAULT_CHUNK_SIZE))
+        chunk_overlap = int(data.get('chunk_overlap', project.chunk_overlap or Config.DEFAULT_CHUNK_OVERLAP))
+        batch_size = int(data.get('batch_size', project.batch_size or Config.DEFAULT_BATCH_SIZE))
+        boundary_min_fill_ratio = float(data.get('boundary_min_fill_ratio',
+            project.boundary_min_fill_ratio or Config.DEFAULT_BOUNDARY_MIN_FILL_RATIO))
+        min_chunk_chars = int(data.get('min_chunk_chars',
+            project.min_chunk_chars or Config.DEFAULT_MIN_CHUNK_CHARS))
+        max_rounds_preview = int(data.get('max_rounds_preview', 48))
+        boost_mode = data.get('boost_mode', 'auto')
+
+        # Load extracted text (does NOT call Zep)
+        text = ProjectManager.get_extracted_text(project_id)
+        if not text:
+            return jsonify({"success": False, "error": "No extracted text found. Upload files first."}), 400
+
+        total_chars = len(text)
+
+        # Run the REAL splitter to get exact chunk count
+        chunks = TextProcessor.split_text(
+            text,
+            chunk_size=chunk_size,
+            overlap=chunk_overlap,
+            boundary_min_fill_ratio=boundary_min_fill_ratio,
+            min_chunk_chars=min_chunk_chars
+        )
+        exact_chunks = len(chunks)
+        estimated_episodes = exact_chunks
+        estimated_batches = math.ceil(exact_chunks / batch_size)
+
+        # Quota risk assessment
+        hard_stop = Config.DEFAULT_HARD_STOP_EPISODE_THRESHOLD
+        warn_threshold = Config.DEFAULT_WARN_EPISODE_THRESHOLD
+        if estimated_episodes >= hard_stop:
+            quota_risk = "high"
+        elif estimated_episodes >= warn_threshold:
+            quota_risk = "medium"
+        else:
+            quota_risk = "low"
+
+        # Ontology tokens (repo caps text at 50k chars for ontology LLM call)
+        ontology_input_chars = min(total_chars, 50_000)
+        ontology_input_tokens = math.ceil(ontology_input_chars / 3.8)
+        ontology_output_tokens = max(2000, math.ceil(ontology_input_tokens * 0.18))
+        ontology_total_tokens = ontology_input_tokens + ontology_output_tokens
+
+        # Graph build time (heuristic: ~0.6-1.5s per episode including Zep processing queue)
+        build_time_min = max(1, round(estimated_episodes * 0.5 / 60, 1))
+        build_time_max = max(2, round(estimated_episodes * 1.5 / 60, 1))
+
+        # Simulation tokens (heuristic: rounds × avg_agents × tokens_per_turn × platforms)
+        avg_agents = 50
+        avg_tokens_per_turn = 900
+        platforms = 2
+        sim_total_tokens = max_rounds_preview * avg_agents * avg_tokens_per_turn * platforms
+
+        if boost_mode == 'off':
+            sim_primary = sim_total_tokens
+            sim_boost = 0
+        else:
+            sim_primary = sim_total_tokens // 2
+            sim_boost = sim_total_tokens // 2
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "total_extracted_chars": total_chars,
+                "exact_chunks": exact_chunks,
+                "estimated_episodes": estimated_episodes,
+                "estimated_batches": estimated_batches,
+                "zep_free_tier_fit": estimated_episodes < hard_stop,
+                "quota_risk": quota_risk,
+                "warn_threshold": warn_threshold,
+                "hard_stop_threshold": hard_stop,
+                "config_used": {
+                    "chunk_size": chunk_size,
+                    "chunk_overlap": chunk_overlap,
+                    "batch_size": batch_size,
+                    "boundary_min_fill_ratio": boundary_min_fill_ratio,
+                    "min_chunk_chars": min_chunk_chars
+                },
+                "ontology_tokens": {
+                    "input": ontology_input_tokens,
+                    "output": ontology_output_tokens,
+                    "total": ontology_total_tokens,
+                    "method": "heuristic",
+                    "chars_sampled": ontology_input_chars
+                },
+                "graph_build_time_minutes": {
+                    "min": build_time_min,
+                    "max": build_time_max
+                },
+                "simulation_preview": {
+                    "max_rounds": max_rounds_preview,
+                    "boost_mode": boost_mode,
+                    "estimated_total_tokens": sim_total_tokens,
+                    "estimated_primary_tokens": sim_primary,
+                    "estimated_boost_tokens": sim_boost,
+                    "method": "heuristic",
+                    "assumption": f"{avg_agents} agents × {avg_tokens_per_turn} tok × {platforms} platforms × {max_rounds_preview} rounds"
+                },
+                "last_build_stats": project.build_stats or {}
+            }
+        })
+
     except Exception as e:
         return jsonify({
             "success": False,

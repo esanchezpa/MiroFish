@@ -44,16 +44,25 @@ class Project:
     graph_id: Optional[str] = None
     graph_build_task_id: Optional[str] = None
     
-    # 配置
+    # Configuration — v0.2: extended chunking and batch settings
     simulation_requirement: Optional[str] = None
-    chunk_size: int = 500
-    chunk_overlap: int = 50
+    chunk_size: int = 4000
+    chunk_overlap: int = 120
+    batch_size: int = 12
+    boundary_min_fill_ratio: float = 0.80
+    min_chunk_chars: int = 2200
+    episode_pack_size: int = 1
+    pdf_cleanup_enabled: bool = True
+    remove_repeated_headers_footers: bool = True
+    normalize_whitespace: bool = True
+    build_stats: Dict[str, Any] = field(default_factory=dict)
+    simulation_stats: Dict[str, Any] = field(default_factory=dict)
     
     # 错误信息
     error: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
+        """Convert to dictionary"""
         return {
             "project_id": self.project_id,
             "name": self.name,
@@ -69,12 +78,21 @@ class Project:
             "simulation_requirement": self.simulation_requirement,
             "chunk_size": self.chunk_size,
             "chunk_overlap": self.chunk_overlap,
+            "batch_size": self.batch_size,
+            "boundary_min_fill_ratio": self.boundary_min_fill_ratio,
+            "min_chunk_chars": self.min_chunk_chars,
+            "episode_pack_size": self.episode_pack_size,
+            "pdf_cleanup_enabled": self.pdf_cleanup_enabled,
+            "remove_repeated_headers_footers": self.remove_repeated_headers_footers,
+            "normalize_whitespace": self.normalize_whitespace,
+            "build_stats": self.build_stats,
+            "simulation_stats": self.simulation_stats,
             "error": self.error
         }
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Project':
-        """从字典创建"""
+        """Create from dictionary — backward-compatible: new fields use defaults if missing"""
         status = data.get('status', 'created')
         if isinstance(status, str):
             status = ProjectStatus(status)
@@ -92,8 +110,17 @@ class Project:
             graph_id=data.get('graph_id'),
             graph_build_task_id=data.get('graph_build_task_id'),
             simulation_requirement=data.get('simulation_requirement'),
-            chunk_size=data.get('chunk_size', 500),
-            chunk_overlap=data.get('chunk_overlap', 50),
+            chunk_size=data.get('chunk_size', 4000),
+            chunk_overlap=data.get('chunk_overlap', 120),
+            batch_size=data.get('batch_size', 12),
+            boundary_min_fill_ratio=data.get('boundary_min_fill_ratio', 0.80),
+            min_chunk_chars=data.get('min_chunk_chars', 2200),
+            episode_pack_size=data.get('episode_pack_size', 1),
+            pdf_cleanup_enabled=data.get('pdf_cleanup_enabled', True),
+            remove_repeated_headers_footers=data.get('remove_repeated_headers_footers', True),
+            normalize_whitespace=data.get('normalize_whitespace', True),
+            build_stats=data.get('build_stats', {}),
+            simulation_stats=data.get('simulation_stats', {}),
             error=data.get('error')
         )
 
